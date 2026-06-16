@@ -1,0 +1,25 @@
+# Optional systemd --user unit, as an alternative to autostarting the daemon
+# from hyprland. Use ONE of the two methods, not both.
+#
+# Install:
+#   cp monitor-autorotate.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now monitor-autorotate.service
+#
+# Requires a graphical session with HYPRLAND_INSTANCE_SIGNATURE in the user
+# environment (so hyprctl works). On Hyprland this is typically imported into the
+# systemd user env; if hyprctl can't find the instance, prefer the exec.lua method.
+
+[Unit]
+Description=Monitor auto-rotate (orientation sensor -> Hyprland)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/.config/hypr/scripts/orientation-daemon.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,31 @@
+-- add block below to hyprland. It reads the orientation from the state file the
+-- daemon writes, defaulting to landscape when the file is missing. Everything
+-- else in output.lua (the eDP-1 + HDMI-A-1 hl.monitor calls that use
+-- M.external_portrait, and the trailing `return M`) stays exactly as-is, and
+-- cfg/workspaces.lua needs no change.
+
+-- External monitor orientation, written by the monitor-autorotate daemon.
+-- Falls back to "landscape" if the state file is absent or unreadable, so the
+-- config is still valid with the sensor unplugged.
+local function read_orientation()
+	local f = io.open(os.getenv("HOME") .. "/.config/hypr/state/orientation", "r")
+	if not f then
+		return "landscape"
+	end
+	local v = (f:read("l") or ""):gsub("%s+", "")
+	f:close()
+	return v == "portrait" and "portrait" or "landscape"
+end
+
+local external_orientation = read_orientation()
+
+M.external_portrait = external_orientation == "portrait"
+
+-- usage example:
+hl.monitor({
+	output = "HDMI-A-1",
+	mode = "1920x1080@75",
+	position = M.external_portrait and "-1080x-420" or "-1920x0",
+	scale = 1,
+	transform = M.external_portrait and 1 or 0,
+})

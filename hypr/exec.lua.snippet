@@ -1,0 +1,9 @@
+-- Add this line inside the existing `hl.on("hyprland.start", function() ... end)` block
+
+    ```lua
+	hl.exec_cmd("python3 " .. os.getenv("HOME") .. "/.config/hypr/scripts/orientation-daemon.py")
+    ```
+
+-- The daemon waits for the sensor to appear, so it is safe to start even when
+-- the Pico is unplugged. `hyprctl reload` does NOT re-fire hyprland.start, so
+-- the daemon is never respawned by its own reloads.
