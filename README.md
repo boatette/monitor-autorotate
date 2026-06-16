@@ -8,13 +8,6 @@ between the `scrolling` and `lua:gridscroll` layouts — no manual step.
 Built for: Hyprland 0.55.4, external monitor `HDMI-A-1`, the Hyprland-in-Lua config
 under `~/.config/hypr`.
 
-## Why an accelerometer (not a gyroscope)
-
-A gyroscope measures angular *velocity* — it knows you're rotating but drifts and
-can't read a resting orientation. An **accelerometer** at rest measures the gravity
-vector, which directly tells landscape from portrait. (IMU chips usually bundle both;
-we only use the accelerometer.)
-
 ## Bill of materials (~$15)
 
 | Part | Approx. | Notes |
