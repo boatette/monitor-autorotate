@@ -5,18 +5,18 @@ mounted on the panel. When the monitor is turned on its rotating VESA arm, a tin
 accelerometer tells a host daemon to rotate the display and switch workspaces 11-18
 between the `scrolling` and `lua:gridscroll` layouts — no manual step.
 
-Built for: Hyprland 0.55.4, external monitor `HDMI-A-1`, the Hyprland-in-Lua config
+Built for: Hyprland 0.55, external monitor `HDMI-A-1`, the Hyprland-in-Lua config
 under `~/.config/hypr`.
 
 ## Bill of materials (~$15)
 
-| Part | Approx. | Notes |
-|------|---------|-------|
-| Raspberry Pi Pico (RP2040) | $4–5 | Runs MicroPython, shows up as USB serial. "Pico H" = pre-soldered headers. |
-| ADXL345 accelerometer breakout | $3–6 | 3-axis accelerometer, I2C. MPU-6050 (~$3) also works; we ignore its gyro. |
-| Female–female jumper wires | $2 | 4 needed. |
-| Micro-USB cable (long) | $3 | Leave slack/strain-relief so it survives the arm rotating. |
-| Adhesive pad / bracket | — | Fix the sensor flat to the back of the panel. |
+| Part                           | Approx. | Notes                                                                      |
+| ------------------------------ | ------- | -------------------------------------------------------------------------- |
+| Raspberry Pi Pico (RP2040)     | $4–5    | Runs MicroPython, shows up as USB serial. "Pico H" = pre-soldered headers. |
+| ADXL345 accelerometer breakout | $3–6    | 3-axis accelerometer, I2C. MPU-6050 (~$3) also works; we ignore its gyro.  |
+| Female–female jumper wires     | $2      | 4 needed.                                                                  |
+| Micro-USB cable (long)         | $3      | Leave slack/strain-relief so it survives the arm rotating.                 |
+| Adhesive pad / bracket         | —       | Fix the sensor flat to the back of the panel.                              |
 
 ## Wiring (ADXL345 → Pico, I2C0)
 
@@ -111,10 +111,12 @@ Then mount on the arm, start the daemon (or relog), and physically rotate.
 ## Tuning
 
 In `firmware/main.py`:
+
 - `PORTRAIT_ENTER_DEG` / `PORTRAIT_EXIT_DEG` — the hysteresis band (avoid flicker near 45°).
 - `DEBOUNCE_S` — how long an orientation must hold before it's emitted (rejects mid-turn wobble).
 
 In `daemon/orientation-daemon.py`:
+
 - `GEOMETRY` — transform/position per orientation (must match `cfg/output.lua`).
 - `--no-reload` — rotate live only, skip the layout switch.
 
