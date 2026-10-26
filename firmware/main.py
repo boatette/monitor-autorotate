@@ -2,7 +2,8 @@
 #
 # Reads an ADXL345 accelerometer over I2C, decides landscape vs portrait from the
 # gravity vector, and prints the orientation over USB serial (one word per line)
-# whenever it changes. Hysteresis + debounce keep it from chattering near 45 deg or
+# whenever it changes, and again every RESEND_S so a host that opens the port late
+# still hears it. Hysteresis + debounce keep it from chattering near 45 deg or
 # mid-rotation.
 #
 # Flash MicroPython to the Pico, then copy this file to the board as main.py so it
@@ -40,6 +41,10 @@ DEBOUNCE_S = 0.6
 
 # How often we sample the accelerometer.
 SAMPLE_INTERVAL_S = 0.05
+
+# Repeat the current orientation this often. Output is dropped while no host has
+# the port open, so without this a daemon started after the Pico never hears it.
+RESEND_S = 2.0
 
 # ADXL345 registers
 _REG_POWER_CTL = 0x2D
@@ -84,6 +89,7 @@ def main():
     orientation = None  # last emitted orientation
     candidate = None  # orientation we're waiting to confirm
     candidate_since = 0
+    sent_at = 0  # when the orientation was last printed
 
     while True:
         try:
@@ -111,8 +117,12 @@ def main():
             elif time.ticks_diff(now, candidate_since) >= int(DEBOUNCE_S * 1000):
                 orientation = candidate
                 print(orientation)  # -> USB serial line
+                sent_at = now
         else:
             candidate = orientation
+            if orientation and time.ticks_diff(now, sent_at) >= int(RESEND_S * 1000):
+                print(orientation)
+                sent_at = now
 
         time.sleep(SAMPLE_INTERVAL_S)
 
