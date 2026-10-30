@@ -1,5 +1,5 @@
 {
-  description = "Rotate aion's monitors from a Pico-mounted accelerometer";
+  description = "Rotate monitors from a Pico-mounted accelerometer";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";

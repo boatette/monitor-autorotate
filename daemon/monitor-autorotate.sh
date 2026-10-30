@@ -1,8 +1,10 @@
-# monitor-autorotate [device]: turns aion's monitors to the orientation the Pico reports
+# monitor-autorotate [device]: turns the monitors to the orientation the Pico reports
 #
 # The Pico prints "portrait" or "landscape" on every change and every couple of seconds
-# besides. Each change becomes `aion msg profile <orientation>`, which moves every monitor
-# to its rule in that profile. The device is reopened whenever it comes back.
+# besides. Each change becomes `$MONITOR_AUTOROTATE_COMMAND <orientation>`, which moves
+# every monitor to its layout for that orientation. The device is reopened whenever it
+# comes back.
+command=${MONITOR_AUTOROTATE_COMMAND:?set it to the command that turns the outputs}
 device=${1:-/dev/monitor-orient}
 last=
 
@@ -16,7 +18,7 @@ follow() {
     [[ $line != "$last" ]] || continue
     last=$line
     echo "turning to $line"
-    aion msg profile "$line" || true
+    "$command" "$line" || true
   done
 }
 

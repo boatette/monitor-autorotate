@@ -1,12 +1,13 @@
 # monitor-autorotate
 
-Turn an external monitor in **aion** when it is rotated on its VESA arm. A Pico with an
+Turn an external monitor when it is rotated on its VESA arm. A Pico with an
 accelerometer on the back of the panel reports `portrait` or `landscape`, and a user
-service hands that to `aion msg profile`, which moves every monitor to its rule in that
-profile. You don't have to do anything when you turn the monitor.
+service hands that to a command you give it, which turns the compositor's outputs (for
+niri, `niri msg output`). You don't have to do anything when you turn the monitor.
 
-Built for: [aion](https://github.com/boatette/aion), external monitor `HDMI-A-1` on
-aspire, and the NixOS config in `~/nix`.
+Built for: [niri](https://github.com/YaLTeR/niri), external monitor `HDMI-A-1` on
+aspire, and the NixOS config in `~/nix`. Any compositor that can move its outputs from
+a command works.
 
 ## Bill of materials (~$15)
 
@@ -41,19 +42,18 @@ points along the sensor's **Y** axis. If your mounting is rotated, tweak
                    ▼  prints it over USB serial on every change, and every 2 s
  /dev/monitor-orient   udev symlink, usable by whoever is logged in at the seat
                    │
- monitor-autorotate    daemon/monitor-autorotate.sh, a user service in aion-session.target
-                   ▼  aion msg profile portrait|landscape, once per change
- aion                  moves every monitor to its rule in that profile (transform + position)
+ monitor-autorotate    daemon/monitor-autorotate.sh, a user service in graphical-session.target
+                   ▼  $MONITOR_AUTOROTATE_COMMAND portrait|landscape, once per change
+ compositor            moves every monitor to its layout for that orientation (transform + position)
 ```
 
-aion's monitor rules are compiled into its config, one set per profile. Nothing is
-stored on disk. aion starts in the first profile by name (`landscape`), and the Pico's
+Nothing is stored on disk. The compositor starts in its configured layout, and the Pico's
 next line, at most 2 s later, corrects it. The repeat also means a daemon that starts
 after the Pico, at login or after a replug, still finds out the current orientation.
 
 ## NixOS
 
-The flake has a `nixosModules.default` that needs `programs.aion`:
+The flake has a `nixosModules.default`:
 
 ```nix
 {
@@ -64,7 +64,13 @@ The flake has a `nixosModules.default` that needs `programs.aion`:
 
   # in a NixOS module
   imports = [ inputs.monitor-autorotate.nixosModules.default ];
-  services.monitor-autorotate.enable = true;
+  services.monitor-autorotate = {
+    enable = true;
+    # an executable, run with portrait or landscape as its only argument
+    command = "${rotate}/bin/rotate";
+    # the user target the compositor's session starts (the default)
+    target = "graphical-session.target";
+  };
 }
 ```
 
@@ -73,24 +79,26 @@ It adds:
 - A udev rule (ordered before `73-seat-late.rules`, so `uaccess` works) that gives a Pico
   running MicroPython (`2e8a:0005`) the symlink `/dev/monitor-orient`, readable by
   whoever is logged in.
-- `monitor-autorotate.service`, a user service that runs while aion does. It waits for
-  the sensor when the sensor is unplugged.
+- `monitor-autorotate.service`, a user service that runs while `target` is active. It
+  waits for the sensor when the sensor is unplugged.
 
-aion's config needs rules for both profiles, e.g.:
+For niri, `command` sets each output's transform and position:
 
-```zig
-pub const monrules = [_]a.MonitorRule{
-    .{ .name = "HDMI-A-1", .profile = "landscape", .x = 0, .y = 0 },
-    .{ .name = "eDP-1", .profile = "landscape", .x = 1920, .y = 0 },
-    .{ .name = "HDMI-A-1", .profile = "portrait", .transform = .@"90", .x = 0, .y = 0 },
-    .{ .name = "eDP-1", .profile = "portrait", .x = 1080, .y = 420 },
-    .{},
-};
+```sh
+case $1 in
+  landscape)
+    niri msg output HDMI-A-1 transform normal
+    niri msg output HDMI-A-1 position set 0 0
+    niri msg output eDP-1 position set 1920 0 ;;
+  portrait)
+    niri msg output HDMI-A-1 transform 90
+    niri msg output HDMI-A-1 position set 0 0
+    niri msg output eDP-1 position set 1080 420 ;;
+esac
 ```
 
-In `~/nix`, `modules/programs/aion.nix` generates these from `profiles` in
-`flake.monitors` (`modules/hosts/aspire/monitors.nix`), and
-`modules/services/monitor-autorotate.nix` enables the service on aspire.
+In `~/nix`, `modules/services/monitor-autorotate.nix` generates this from `profiles` in
+`flake.monitors` (`modules/hosts/aspire/monitors.nix`) and enables the service on aspire.
 
 ## Firmware
 
@@ -103,13 +111,11 @@ In `~/nix`, `modules/programs/aion.nix` generates these from `profiles` in
 
 ## Testing
 
-**No hardware needed.** Switch aion's profile by hand:
+**No hardware needed.** Run the command by hand, or turn an output directly:
 
 ```sh
-aion msg profile portrait
-aion msg profile landscape
-aion msg profile                  # prints the active one
-aion msg monitors                 # HDMI-A-1 is 1080 wide in portrait, 1920 in landscape
+niri msg output HDMI-A-1 transform 90
+niri msg outputs                  # HDMI-A-1 is 1080 wide in portrait, 1920 in landscape
 ```
 
 **With the Pico.** Stop the service first, so the two readers don't split the lines:
@@ -130,14 +136,13 @@ In `firmware/main.py`:
 - `DEBOUNCE_S`: how long an orientation must hold before it's emitted (rejects mid-turn wobble).
 - `RESEND_S`: how often the current orientation is repeated.
 
-Each profile's transform and position live in the aion config (`flake.monitors` in `~/nix`).
+Each orientation's transform and position live in the command (`flake.monitors` in `~/nix`).
 
 ## Notes / limitations
 
 - The USB cable rotates with the arm, so leave a service loop.
-- aion has a single scrolling layout, so nothing changes per orientation apart from the
-  monitor itself. Column widths are fractions of the monitor, so columns get narrower
-  or wider as it turns.
+- Nothing changes per orientation apart from the monitor itself. In a scrolling layout,
+  column widths are fractions of the monitor, so columns get narrower or wider as it turns.
 - A turn while the monitors are off (idle) is applied when they wake. Turning also works
   while the session is locked.
 - The udev rule matches any Pico running MicroPython. With a second one plugged in,
