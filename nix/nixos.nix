@@ -11,7 +11,7 @@ let
 in
 {
   options.services.monitor-autorotate = {
-    enable = lib.mkEnableOption "turning aion's monitors to the orientation a Pico-mounted accelerometer reports";
+    enable = lib.mkEnableOption "turning monitors to the orientation a Pico-mounted accelerometer reports";
 
     package = lib.mkOption {
       type = lib.types.package;
@@ -19,16 +19,22 @@ in
       defaultText = lib.literalExpression "monitor-autorotate.packages.\${pkgs.stdenv.hostPlatform.system}.default";
       description = "The monitor-autorotate package to use.";
     };
+
+    command = lib.mkOption {
+      type = lib.types.str;
+      example = lib.literalExpression ''"''${pkgs.writeShellScript "rotate" "aion msg profile $1"}"'';
+      description = "Run with `portrait` or `landscape` as its only argument whenever the orientation changes; it turns the compositor's outputs.";
+    };
+
+    target = lib.mkOption {
+      type = lib.types.str;
+      default = "graphical-session.target";
+      example = "aion-session.target";
+      description = "The user target the service runs under, i.e. the one the compositor's session starts.";
+    };
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = config.programs.aion.enable or false;
-        message = "services.monitor-autorotate switches aion's monitor profiles, so it needs programs.aion.enable";
-      }
-    ];
-
     # /dev/monitor-orient for a Pico running MicroPython, usable by whoever is logged in at the seat;
     # uaccess only takes effect before 73-seat-late.rules, so it can't go in extraRules' 99-local.rules
     services.udev.packages = [
@@ -37,13 +43,13 @@ in
       '')
     ];
 
-    # runs while aion does, and waits for the sensor if it isn't plugged in
+    # runs while the compositor does, and waits for the sensor if it isn't plugged in
     systemd.user.services.monitor-autorotate = {
-      description = "Turn aion's monitors to match the orientation sensor";
-      wantedBy = [ "aion-session.target" ];
-      partOf = [ "aion-session.target" ];
-      after = [ "aion-session.target" ];
-      path = [ config.programs.aion.package ];
+      description = "Turn the monitors to match the orientation sensor";
+      wantedBy = [ cfg.target ];
+      partOf = [ cfg.target ];
+      after = [ cfg.target ];
+      environment.MONITOR_AUTOROTATE_COMMAND = cfg.command;
       serviceConfig = {
         ExecStart = lib.getExe cfg.package;
         Restart = "on-failure";
