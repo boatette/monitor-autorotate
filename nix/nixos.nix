@@ -22,14 +22,13 @@ in
 
     command = lib.mkOption {
       type = lib.types.str;
-      example = lib.literalExpression ''"''${pkgs.writeShellScript "rotate" "aion msg profile $1"}"'';
+      example = lib.literalExpression ''"''${pkgs.writeShellScript "rotate" "wlr-randr --output HDMI-A-1 --transform 90"}"'';
       description = "Run with `portrait` or `landscape` as its only argument whenever the orientation changes; it turns the compositor's outputs.";
     };
 
     target = lib.mkOption {
       type = lib.types.str;
       default = "graphical-session.target";
-      example = "aion-session.target";
       description = "The user target the service runs under, i.e. the one the compositor's session starts.";
     };
   };

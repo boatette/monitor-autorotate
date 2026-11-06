@@ -3,9 +3,9 @@
 Turn an external monitor when it is rotated on its VESA arm. A Pico with an
 accelerometer on the back of the panel reports `portrait` or `landscape`, and a user
 service hands that to a command you give it, which turns the compositor's outputs (for
-niri, `niri msg output`). You don't have to do anything when you turn the monitor.
+umbriel, `wlr-randr`). You don't have to do anything when you turn the monitor.
 
-Built for: [niri](https://github.com/YaLTeR/niri), external monitor `HDMI-A-1` on
+Built for: [umbriel](https://github.com/noctalia-dev/umbriel), external monitor `HDMI-A-1` on
 aspire, and the NixOS config in `~/nix`. Any compositor that can move its outputs from
 a command works.
 
@@ -82,18 +82,18 @@ It adds:
 - `monitor-autorotate.service`, a user service that runs while `target` is active. It
   waits for the sensor when the sensor is unplugged.
 
-For niri, `command` sets each output's transform and position:
+For umbriel, `command` sets each output's transform and position. Umbriel applies
+`wlr-randr` until the next output-state change, and a restart returns to the configured
+layout:
 
 ```sh
 case $1 in
   landscape)
-    niri msg output HDMI-A-1 transform normal
-    niri msg output HDMI-A-1 position set 0 0
-    niri msg output eDP-1 position set 1920 0 ;;
+    wlr-randr --output HDMI-A-1 --transform normal --pos 0,0
+    wlr-randr --output eDP-1 --transform normal --pos 1920,0 ;;
   portrait)
-    niri msg output HDMI-A-1 transform 90
-    niri msg output HDMI-A-1 position set 0 0
-    niri msg output eDP-1 position set 1080 420 ;;
+    wlr-randr --output HDMI-A-1 --transform 90 --pos 0,0
+    wlr-randr --output eDP-1 --transform normal --pos 1080,420 ;;
 esac
 ```
 
@@ -114,8 +114,8 @@ In `~/nix`, `modules/services/monitor-autorotate.nix` generates this from `profi
 **No hardware needed.** Run the command by hand, or turn an output directly:
 
 ```sh
-niri msg output HDMI-A-1 transform 90
-niri msg outputs                  # HDMI-A-1 is 1080 wide in portrait, 1920 in landscape
+wlr-randr --output HDMI-A-1 --transform 90
+wlr-randr                         # HDMI-A-1 is 1080 wide in portrait, 1920 in landscape
 ```
 
 **With the Pico.** Stop the service first, so the two readers don't split the lines:
