@@ -32,9 +32,11 @@
 
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
-          packages = [
-            pkgs.mpremote
-            pkgs.shellcheck
+          packages = with pkgs; [
+            mpremote
+            pyright
+            ruff
+            shellcheck
           ];
         };
       });
